@@ -32,7 +32,7 @@
 
 static const uint32_t GPSBaud = 9600;
 
-/* Define lbibraries */
+/* Define libraries */
 HardwareSerial hs(2);
 TinyGPSPlus gps;
 TFT_eSPI tft = TFT_eSPI();
@@ -41,24 +41,23 @@ TFT_eSPI tft = TFT_eSPI();
 static void smartDelay(unsigned long ms);
 static void printFloat(float val, bool valid, int len, int prec);
 static void printInt(unsigned long val, bool valid, int len);
-static void printDateTime(TinyGPSDate &d, TinyGPSTime &t);
-static void printStr(const char *str, int len);
-
+static void printDate(TinyGPSDate &d);
+static void printTime(TinyGPSTime &t);
 
 void setup()
 {
   /* Setup the baudrate */
   Serial.begin(115200);
 
-  /* Setup GPS Module */  
+  /* Setup GPS Module */
   hs.begin(GPSBaud, SERIAL_8N1, RXPin, TXPin, false);
 
   /* Initialize the TFT Display */
   tft.init();
   tft.setRotation(1);
-  tft.fillScreen(TFT_WHITE);
-  tft.setTextSize(1);
-  tft.setTextColor(TFT_BLACK);
+  tft.fillScreen(TFT_BLACK);
+  tft.setTextSize(2);
+  tft.setTextColor(TFT_WHITE);
 
   if (TFT_BL > 0)
   {
@@ -70,55 +69,40 @@ void setup()
 void loop()
 {
   /* Clear TFT Screen */
-  tft.setTextColor(TFT_BLACK, TFT_DARKGREY);
   tft.fillScreen(TFT_BLACK);
+  tft.setTextColor(TFT_WHITE);
   tft.setCursor(0, 0);
-  
+
   /* Display GPS */
-  static const double LONDON_LAT = 51.508131, LONDON_LON = -0.128002;
-
+  tft.print("Satellites: ");
   printInt(gps.satellites.value(), gps.satellites.isValid(), 5);
+  tft.print("\nHDOP: ");
   printFloat(gps.hdop.hdop(), gps.hdop.isValid(), 6, 1);
+  tft.print("\nLatitude: ");
   printFloat(gps.location.lat(), gps.location.isValid(), 11, 6);
+  tft.print("\nLongitude: ");
   printFloat(gps.location.lng(), gps.location.isValid(), 12, 6);
+  tft.print("\nFix (Age): ");
   printInt(gps.location.age(), gps.location.isValid(), 5);
-  printDateTime(gps.date, gps.time);
+  tft.print("\nDate: ");
+  printDate(gps.date);
+  tft.print("\nTime: ");
+  printTime(gps.time);
+  tft.print("\nDate (Age): ");
   printFloat(gps.altitude.meters(), gps.altitude.isValid(), 7, 2);
-  printFloat(gps.course.deg(), gps.course.isValid(), 7, 2);
-  printFloat(gps.speed.kmph(), gps.speed.isValid(), 6, 2);
-  printStr(gps.course.isValid() ? TinyGPSPlus::cardinal(gps.course.deg()) : "*** ", 6);
-
-  unsigned long distanceKmToLondon =
-      (unsigned long)TinyGPSPlus::distanceBetween(
-          gps.location.lat(),
-          gps.location.lng(),
-          LONDON_LAT,
-          LONDON_LON) /
-      1000;
-  printInt(distanceKmToLondon, gps.location.isValid(), 9);
-
-  double courseToLondon =
-      TinyGPSPlus::courseTo(
-          gps.location.lat(),
-          gps.location.lng(),
-          LONDON_LAT,
-          LONDON_LON);
-
-  printFloat(courseToLondon, gps.location.isValid(), 7, 2);
-
-  const char *cardinalToLondon = TinyGPSPlus::cardinal(courseToLondon);
-
-  printStr(gps.location.isValid() ? cardinalToLondon : "*** ", 6);
-
+  tft.print("\nChars: ");
   printInt(gps.charsProcessed(), true, 6);
+  tft.print("\nSentences: ");
   printInt(gps.sentencesWithFix(), true, 10);
+  tft.print("\nChecksum: ");
   printInt(gps.failedChecksum(), true, 9);
-  Serial.println();
 
   smartDelay(1000);
 
   if (millis() > 5000 && gps.charsProcessed() < 10)
-    Serial.println(F("No GPS data received: check wiring"));
+  {
+    tft.print(F("No GPS data received: check wiring"));
+  }
 }
 
 /* Set the function */
@@ -166,7 +150,7 @@ static void printInt(unsigned long val, bool valid, int len)
   smartDelay(0);
 }
 
-static void printDateTime(TinyGPSDate &d, TinyGPSTime &t)
+static void printDate(TinyGPSDate &d)
 {
   if (!d.isValid())
   {
@@ -179,6 +163,12 @@ static void printDateTime(TinyGPSDate &d, TinyGPSTime &t)
     tft.print(sz);
   }
 
+  printInt(d.age(), d.isValid(), 5);
+  smartDelay(0);
+}
+
+static void printTime(TinyGPSTime &t)
+{
   if (!t.isValid())
   {
     tft.print(F("******** "));
@@ -190,14 +180,6 @@ static void printDateTime(TinyGPSDate &d, TinyGPSTime &t)
     tft.print(sz);
   }
 
-  printInt(d.age(), d.isValid(), 5);
-  smartDelay(0);
-}
-
-static void printStr(const char *str, int len)
-{
-  int slen = strlen(str);
-  for (int i = 0; i < len; ++i)
-    tft.print(i < slen ? str[i] : ' ');
+  printInt(t.age(), t.isValid(), 5);
   smartDelay(0);
 }
