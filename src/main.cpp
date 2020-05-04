@@ -124,7 +124,7 @@ void loop()
     printTime(gps.time);
     tft.print("\nDate (Age): ");
     printFloat(gps.altitude.meters(), gps.altitude.isValid(), 7, 2);
-    tft.print("\nAlt (m): ");
+    tft.print("\nAltitude (m): ");
     printFloat(gps.course.deg(), gps.course.isValid(), 7, 2);
     tft.print("\nCourse Speed Card: ");
     printFloat(gps.speed.kmph(), gps.speed.isValid(), 6, 2);
@@ -138,7 +138,7 @@ void loop()
     smartDelay(1000);
   }
 
-  if (now2 - last2 >= 10000)
+  if (now2 - last2 >= 20000)
   {
     last2 = now2;
 
