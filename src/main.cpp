@@ -5,6 +5,8 @@
 #include <SPI.h>
 #include <SD.h>
 
+/* Select your board model. By uncomment */
+
 // #define T4_V12
 #define T4_V13
 // #define T10_V14
@@ -24,6 +26,8 @@
 #else
 #error "Please select board version."
 #endif
+
+/* 0, 223 */
 
 SPIClass sdSPI(VSPI);
 #define IP5306_ADDR 0X75
@@ -46,9 +50,11 @@ static void printTime(TinyGPSTime &t);
 String setFilename(TinyGPSDate &d);
 void writeRoot(fs::FS &fs);
 
-unsigned long last1 = 0;
-unsigned long last2 = 0;
+uint32_t last1 = 0;
+uint32_t last2 = 0;
 char filename[12];
+bool writeOk = false;
+bool isReady = false;
 
 void setup()
 {
@@ -59,7 +65,7 @@ void setup()
   tft.init();
   tft.setRotation(1);
   tft.fillScreen(TFT_BLACK);
-  tft.setTextSize(2);
+  tft.setTextSize(3);
   tft.setTextColor(TFT_WHITE);
 
   if (TFT_BL > 0)
@@ -75,32 +81,38 @@ void setup()
     if (!SD.begin(SD_CS, sdSPI))
     {
       Serial.println("Failed!");
-      tft.setCursor(0, 223);
-      tft.println("SD Card: Mount failed!");
-      while (1)
-        ;
+
+      tft.setCursor(0, 0);
+      tft.println("Mount failed!");
+
+      delay(1000);
+
+      isReady = false;
     }
     else
     {
       Serial.println("Success!");
-      tft.setCursor(0, 223);
-      tft.println("SD Card: Mount Success!");
+
+      tft.setCursor(0, 0);
+      tft.println("Mount Success!");
+
+      delay(1000);
+
+      isReady = true;
     }
   }
+
+  tft.setTextSize(2);
 }
 
 void loop()
 {
-  unsigned long now1 = millis() + 1000;
-  unsigned long now2 = millis() + 1000;
-
-  if (now1 - last1 >= 1000)
+  if (millis() - last1 >= 1000L)
   {
-    last1 = now1;
+    last1 = millis();
 
     tft.fillScreen(TFT_BLACK);
     tft.setTextColor(TFT_WHITE);
-    tft.setCursor(0, 223);
 
     if (millis() > 5000 && gps.charsProcessed() < 10)
     {
@@ -135,14 +147,36 @@ void loop()
     tft.print("\nChecksum: ");
     printInt(gps.failedChecksum(), true, 9);
 
-    smartDelay(1000);
+    if (writeOk == true && isReady == true)
+    {
+      tft.setTextSize(1.3);
+      tft.setCursor(0, 223);
+      tft.print("SD Card: Writing");
+      tft.setTextSize(2);
+    }
+    else if (writeOk == false && isReady == true)
+    {
+      tft.setTextSize(1.3);
+      tft.setCursor(0, 223);
+      tft.print("SD Card: Attempting to write");
+      tft.setTextSize(2);
+    }
+    else if (writeOk == false && isReady == false)
+    {
+      tft.setTextSize(1.3);
+      tft.setCursor(0, 223);
+      tft.println("SD Card: Mount failed!");
+      tft.setTextSize(2);
+    }
+
+    smartDelay(1800);
   }
 
-  if (now2 - last2 >= 20000)
+  if ((millis() - last2) >= 20000L && isReady == true)
   {
-    last2 = now2;
-
     writeRoot(SD);
+
+    last2 = millis();
   }
 }
 
@@ -236,10 +270,11 @@ void writeRoot(fs::FS &fs)
 {
   File root = fs.open(setFilename(gps.date), FILE_APPEND);
   Serial.print("SD Card Write...   ");
+
   if (root)
   {
-    tft.setCursor(0, 223);
-    tft.print("\nSD Card: Working!");
+    writeOk = true;
+
     Serial.println("Success");
 
     root.print(gps.satellites.isValid());
@@ -282,8 +317,8 @@ void writeRoot(fs::FS &fs)
   }
   else
   {
+    writeOk = false;
+
     Serial.println("Failed");
-    tft.setCursor(0, 223);
-    tft.print("\nSD Card: Failed to write");
   }
 }
