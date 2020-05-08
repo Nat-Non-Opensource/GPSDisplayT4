@@ -9,20 +9,11 @@
 
 // #define T4_V12
 #define T4_V13
-// #define T10_V14
-// #define T10_V18
-// #define T10_V20
 
-#if defined(T10_V18)
-#include "T10_V18.h"
-#elif defined(T10_V14)
-#include "T10_V14.h"
-#elif defined(T4_V12)
+#if defined(T4_V12)
 #include "T4_V12.h"
 #elif defined(T4_V13)
 #include "T4_V13.h"
-#elif defined(T10_V20)
-#include "T10_V20.h"
 #else
 #error "Please select board version."
 #endif
